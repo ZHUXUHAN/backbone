@@ -83,15 +83,19 @@ def resnet(fp16, units, num_stages, filter_list, num_classes, bottle_neck, **kwa
         body = residual_unit(body, filter_list[i + 1], (2, 2), False,
             name='stage%d_unit%d' % (i + 1, 1), bottle_neck=bottle_neck, **kwargs)
         for j in range(units[i] - 1):
-            body = residual_unit(body, filter_list[i + 1], (1, 1), True, name='stage%d_unit%d' % (i + 1, j + 2),
-                bottle_neck=bottle_neck, **kwargs)
+            body = residual_unit(
+                data=body, num_filter=filter_list[i + 1], stride=(1, 1), dim_match=True,
+                name='stage%d_unit%d' % (i + 1, j + 2), bottle_neck=bottle_neck, **kwargs)
     if fp16:
         body = mx.sym.cast(body, dtype='float32')
 
-    body = mx.sym.Convolution(data=body, num_filter=int(num_classes / 8), kernel=(1, 1), stride=(1, 1), pad=(0, 0),
+    body = mx.sym.Convolution(
+        data=body, num_filter=num_classes // 8, kernel=(1, 1), stride=(1, 1), pad=(0, 0),
         no_bias=True, name="conv_final", workspace=workspace)
-    body = mx.sym.BatchNorm(data=body, fix_gamma=False, eps=2e-5, momentum=bn_mom, name='bn1')
-    fc1 = mx.sym.FullyConnected(data=body, num_hidden=num_classes, name='pre_fc1')
+    body = mx.sym.BatchNorm(
+        data=body, fix_gamma=False, eps=2e-5, momentum=bn_mom, name='bn1')
+    fc1 = mx.sym.FullyConnected(
+        data=body, num_hidden=num_classes, name='pre_fc1')
 
     return fc1
 
